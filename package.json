@@ -1,0 +1,9 @@
+{
+  "name": "investment-portfolio-optimizer",
+  "version": "1.0.0",
+  "description": "Investment Portfolio Optimizer Project",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ]
+}
