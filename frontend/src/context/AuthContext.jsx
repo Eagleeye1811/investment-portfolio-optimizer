@@ -1,6 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-// Fix import path
-import { Auth } from 'aws-amplify/auth';
+import { signIn, signUp, confirmSignUp, signOut, getCurrentUser, fetchAuthSession, resetPassword, confirmResetPassword } from 'aws-amplify/auth';
 
 const AuthContext = createContext({
   user: null,
@@ -18,101 +17,128 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAmplifyConfigured, setIsAmplifyConfigured] = useState(false);
 
-  // Check if Amplify is configured
   useEffect(() => {
-    try {
-      // Check if Auth is properly configured by attempting to get the config
-      if (Auth && Auth.configure) {
-        const config = Auth.configure();
-        if (config && config.userPoolId && config.userPoolWebClientId) {
-          setIsAmplifyConfigured(true);
-        } else {
-          console.error('Amplify Auth configuration is incomplete. Missing userPoolId or userPoolWebClientId.');
-        }
-      }
-    } catch (error) {
-      console.error('Error checking Amplify configuration:', error);
-    }
+    checkAuthState();
   }, []);
-
-  // Only check auth state after confirming Amplify is configured
-  useEffect(() => {
-    if (isAmplifyConfigured) {
-      checkAuthState();
-    }
-  }, [isAmplifyConfigured]);
 
   async function checkAuthState() {
     try {
-      const currentUser = await Auth.currentAuthenticatedUser();
+      const currentUser = await getCurrentUser();
       setUser(currentUser);
       setIsAuthenticated(true);
+      console.log('✅ User authenticated:', currentUser.username);
     } catch (error) {
-      // Not treating this as an error - user may simply not be logged in
+      // User not authenticated - this is normal
       setUser(null);
       setIsAuthenticated(false);
+      console.log('ℹ️ No authenticated user');
     } finally {
       setIsLoading(false);
     }
   }
 
-  const signIn = async (username, password) => {
+  const handleSignIn = async (username, password) => {
     try {
-      const user = await Auth.signIn(username, password);
-      setUser(user);
-      setIsAuthenticated(true);
-      return user;
+      const { isSignedIn, nextStep } = await signIn({ username, password });
+      
+      if (isSignedIn) {
+        const currentUser = await getCurrentUser();
+        setUser(currentUser);
+        setIsAuthenticated(true);
+        console.log('✅ Sign in successful');
+        return currentUser;
+      }
+      
+      // Handle additional steps (MFA, etc.)
+      console.log('Next step:', nextStep);
+      return { nextStep };
     } catch (error) {
-      throw error;
+      console.error('❌ Sign in error:', error);
+      throw new Error(error.message || 'Failed to sign in');
     }
   };
 
-  const signUp = async (username, password, email) => {
+  const handleSignUp = async (username, password, email) => {
     try {
-      const { user } = await Auth.signUp({
+      const { isSignUpComplete, userId, nextStep } = await signUp({
         username,
         password,
-        attributes: { email }
+        options: {
+          userAttributes: {
+            email
+          }
+        }
       });
-      return user;
+      
+      console.log('✅ Sign up successful, confirmation needed');
+      return { userId, nextStep };
     } catch (error) {
-      throw error;
+      console.error('❌ Sign up error:', error);
+      throw new Error(error.message || 'Failed to sign up');
     }
   };
 
-  const confirmSignUp = async (username, code) => {
+  const handleConfirmSignUp = async (username, code) => {
     try {
-      return await Auth.confirmSignUp(username, code);
+      const { isSignUpComplete, nextStep } = await confirmSignUp({
+        username,
+        confirmationCode: code
+      });
+      
+      console.log('✅ Email confirmed successfully');
+      return { isSignUpComplete, nextStep };
     } catch (error) {
-      throw error;
+      console.error('❌ Confirmation error:', error);
+      throw new Error(error.message || 'Failed to confirm sign up');
     }
   };
 
-  const signOut = async () => {
+  const handleSignOut = async () => {
     try {
-      await Auth.signOut();
+      await signOut();
       setUser(null);
       setIsAuthenticated(false);
+      console.log('✅ Signed out successfully');
     } catch (error) {
-      throw error;
+      console.error('❌ Sign out error:', error);
+      throw new Error(error.message || 'Failed to sign out');
     }
   };
 
-  const forgotPassword = async (username) => {
+  const handleForgotPassword = async (username) => {
     try {
-      return await Auth.forgotPassword(username);
+      const output = await resetPassword({ username });
+      console.log('✅ Password reset code sent');
+      return output;
     } catch (error) {
-      throw error;
+      console.error('❌ Forgot password error:', error);
+      throw new Error(error.message || 'Failed to initiate password reset');
     }
   };
 
-  const forgotPasswordSubmit = async (username, code, newPassword) => {
+  const handleForgotPasswordSubmit = async (username, code, newPassword) => {
     try {
-      return await Auth.forgotPasswordSubmit(username, code, newPassword);
+      await confirmResetPassword({
+        username,
+        confirmationCode: code,
+        newPassword
+      });
+      console.log('✅ Password reset successful');
     } catch (error) {
-      throw error;
+      console.error('❌ Password reset error:', error);
+      throw new Error(error.message || 'Failed to reset password');
+    }
+  };
+
+  // Helper function to get JWT token (for API calls later)
+  const getAuthToken = async () => {
+    try {
+      const session = await fetchAuthSession();
+      return session.tokens?.idToken?.toString();
+    } catch (error) {
+      console.error('Error getting auth token:', error);
+      return null;
     }
   };
 
@@ -122,13 +148,13 @@ export const AuthProvider = ({ children }) => {
         user,
         isLoading,
         isAuthenticated,
-        isAmplifyConfigured,
-        signIn,
-        signUp,
-        confirmSignUp,
-        signOut,
-        forgotPassword,
-        forgotPasswordSubmit,
+        signIn: handleSignIn,
+        signUp: handleSignUp,
+        confirmSignUp: handleConfirmSignUp,
+        signOut: handleSignOut,
+        forgotPassword: handleForgotPassword,
+        forgotPasswordSubmit: handleForgotPasswordSubmit,
+        getAuthToken // Export this for API calls
       }}
     >
       {children}

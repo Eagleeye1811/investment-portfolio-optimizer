@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   Container,
@@ -9,41 +9,33 @@ import {
   Button,
   Alert,
   Paper,
-  Grid,
   Stepper,
   Step,
   StepLabel
 } from '@mui/material';
-
-const steps = ['Request Code', 'Reset Password'];
 
 const ForgotPassword = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [username, setUsername] = useState('');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const { forgotPassword, forgotPasswordSubmit } = useAuth();
+  const navigate = useNavigate();
 
-  const handleRequestCode = async (e) => {
+  const steps = ['Enter Username', 'Verify Code', 'Reset Password'];
+
+  const handleSendCode = async (e) => {
     e.preventDefault();
-    if (!username) {
-      setError('Username is required');
-      return;
-    }
-
-    setLoading(true);
     setError('');
-    
+    setLoading(true);
+
     try {
       await forgotPassword(username);
-      setActiveStep(1); // Move to reset password step
-      setSuccess(true);
+      setActiveStep(1);
     } catch (err) {
-      setError(err.message || 'Failed to request password reset code');
+      setError(err.message || 'Failed to send reset code');
     } finally {
       setLoading(false);
     }
@@ -51,107 +43,17 @@ const ForgotPassword = () => {
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
-    
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-    
-    if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters');
-      return;
-    }
-    
-    setLoading(true);
     setError('');
-    
+    setLoading(true);
+
     try {
       await forgotPasswordSubmit(username, code, newPassword);
-      setSuccess(true);
+      alert('Password reset successfully! You can now sign in with your new password.');
+      navigate('/login');
     } catch (err) {
       setError(err.message || 'Failed to reset password');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const renderStepContent = (step) => {
-    switch (step) {
-      case 0:
-        return (
-          <Box component="form" onSubmit={handleRequestCode} sx={{ mt: 1 }}>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="username"
-              label="Username"
-              name="username"
-              autoComplete="username"
-              autoFocus
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading}
-            >
-              {loading ? 'Sending...' : 'Send Reset Code'}
-            </Button>
-          </Box>
-        );
-      case 1:
-        return (
-          <Box component="form" onSubmit={handleResetPassword} sx={{ mt: 1 }}>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="code"
-              label="Verification Code"
-              id="code"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              autoFocus
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="newPassword"
-              label="New Password"
-              type="password"
-              id="newPassword"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="confirmPassword"
-              label="Confirm New Password"
-              type="password"
-              id="confirmPassword"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-            />
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading}
-            >
-              {loading ? 'Resetting...' : 'Reset Password'}
-            </Button>
-          </Box>
-        );
-      default:
-        return 'Unknown step';
     }
   };
 
@@ -160,33 +62,90 @@ const ForgotPassword = () => {
       <Box sx={{ marginTop: 8 }}>
         <Paper elevation={3} sx={{ padding: 4 }}>
           <Typography component="h1" variant="h5" align="center" gutterBottom>
-            Reset Your Password
+            Reset Password
           </Typography>
-          
-          <Stepper activeStep={activeStep} sx={{ mt: 3, mb: 4 }}>
+
+          <Stepper activeStep={activeStep} sx={{ mt: 3, mb: 3 }}>
             {steps.map((label) => (
               <Step key={label}>
                 <StepLabel>{label}</StepLabel>
               </Step>
             ))}
           </Stepper>
-          
+
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-          {success && activeStep === 1 && (
-            <Alert severity="success" sx={{ mb: 2 }}>
-              Password reset successful! You can now login with your new password.
-            </Alert>
+
+          {activeStep === 0 && (
+            <Box component="form" onSubmit={handleSendCode}>
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                id="username"
+                label="Username"
+                name="username"
+                autoComplete="username"
+                autoFocus
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+              <Button
+                type="submit"
+                fullWidth
+                variant="contained"
+                sx={{ mt: 3, mb: 2 }}
+                disabled={loading}
+              >
+                {loading ? 'Sending...' : 'Send Reset Code'}
+              </Button>
+            </Box>
           )}
-          
-          {renderStepContent(activeStep)}
-          
-          <Grid container justifyContent="center" sx={{ mt: 2 }}>
-            <Grid item>
-              <Link to="/login" style={{ textDecoration: 'none' }}>
-                Back to Login
-              </Link>
-            </Grid>
-          </Grid>
+
+          {activeStep === 1 && (
+            <Box component="form" onSubmit={handleResetPassword}>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                A reset code has been sent to your email address.
+              </Alert>
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                id="code"
+                label="Reset Code"
+                name="code"
+                autoFocus
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="Enter 6-digit code"
+              />
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                name="newPassword"
+                label="New Password"
+                type="password"
+                id="newPassword"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+              <Button
+                type="submit"
+                fullWidth
+                variant="contained"
+                sx={{ mt: 3, mb: 2 }}
+                disabled={loading}
+              >
+                {loading ? 'Resetting...' : 'Reset Password'}
+              </Button>
+            </Box>
+          )}
+
+          <Box sx={{ textAlign: 'center', mt: 2 }}>
+            <Link to="/login" style={{ textDecoration: 'none' }}>
+              Back to Sign In
+            </Link>
+          </Box>
         </Paper>
       </Box>
     </Container>

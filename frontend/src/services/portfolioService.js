@@ -1,14 +1,13 @@
 import axios from 'axios';
-// Fix import path
-import { Auth } from 'aws-amplify/auth';
+import { fetchAuthSession } from 'aws-amplify/auth';
 
 const API_URL = import.meta.env.VITE_API_ENDPOINT || 'https://api-placeholder-url.execute-api.region.amazonaws.com/dev';
 
 // Helper function to get auth headers
 const getAuthHeaders = async () => {
   try {
-    const session = await Auth.currentSession();
-    const token = session.getIdToken().getJwtToken();
+    const session = await fetchAuthSession();
+    const token = session.tokens?.idToken?.toString();
     return {
       Authorization: `Bearer ${token}`
     };

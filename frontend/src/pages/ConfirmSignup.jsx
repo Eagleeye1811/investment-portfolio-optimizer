@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -12,38 +12,26 @@ import {
 } from '@mui/material';
 
 const ConfirmSignup = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { confirmSignUp } = useAuth();
+  
+  const [username, setUsername] = useState(location.state?.username || '');
   const [code, setCode] = useState('');
-  const [username, setUsername] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { confirmSignUp } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  useEffect(() => {
-    // Get username from location state if available
-    if (location.state && location.state.username) {
-      setUsername(location.state.username);
-    }
-  }, [location]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!username || !code) {
-      setError('Username and verification code are required');
-      return;
-    }
-    
-    setLoading(true);
     setError('');
-    
+    setLoading(true);
+
     try {
       await confirmSignUp(username, code);
-      // Redirect to login page after successful confirmation
-      navigate('/login', { state: { confirmationSuccess: true } });
+      alert('Email confirmed successfully! You can now sign in.');
+      navigate('/login');
     } catch (err) {
-      setError(err.message || 'Failed to confirm signup');
+      setError(err.message || 'Failed to confirm sign up');
     } finally {
       setLoading(false);
     }
@@ -54,10 +42,10 @@ const ConfirmSignup = () => {
       <Box sx={{ marginTop: 8 }}>
         <Paper elevation={3} sx={{ padding: 4 }}>
           <Typography component="h1" variant="h5" align="center" gutterBottom>
-            Confirm Your Account
+            Confirm Your Email
           </Typography>
-          <Typography variant="body2" align="center" gutterBottom sx={{ mb: 3 }}>
-            We've sent a verification code to your email. Please enter it below.
+          <Typography variant="body2" align="center" color="textSecondary" sx={{ mb: 3 }}>
+            We sent a confirmation code to your email address. Please enter it below.
           </Typography>
           
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -70,20 +58,22 @@ const ConfirmSignup = () => {
               id="username"
               label="Username"
               name="username"
+              autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              disabled={!!location.state?.username}
             />
             <TextField
               margin="normal"
               required
               fullWidth
-              name="code"
-              label="Verification Code"
               id="code"
+              label="Confirmation Code"
+              name="code"
+              autoComplete="off"
+              autoFocus
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              autoFocus
+              placeholder="Enter 6-digit code"
             />
             <Button
               type="submit"
@@ -92,16 +82,12 @@ const ConfirmSignup = () => {
               sx={{ mt: 3, mb: 2 }}
               disabled={loading}
             >
-              {loading ? 'Verifying...' : 'Verify Account'}
+              {loading ? 'Confirming...' : 'Confirm Email'}
             </Button>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+            <Box sx={{ textAlign: 'center' }}>
               <Link to="/login" style={{ textDecoration: 'none' }}>
-                Back to Login
+                Back to Sign In
               </Link>
-              {/* TODO: Add resend code functionality */}
-              <Button variant="text" size="small" disabled>
-                Resend Code
-              </Button>
             </Box>
           </Box>
         </Paper>

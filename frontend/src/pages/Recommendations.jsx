@@ -1,295 +1,300 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Container, 
-  Grid, 
-  Paper, 
-  Typography, 
-  Box, 
+import {
+  Container,
+  Grid,
+  Paper,
+  Typography,
+  Box,
+  Card,
+  CardContent,
   Chip,
   Button,
   List,
   ListItem,
   ListItemText,
   Divider,
-  Card,
-  CardContent,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions
+  CircularProgress
 } from '@mui/material';
 import {
-  TrendingUp as TrendingUpIcon,
-  TrendingDown as TrendingDownIcon,
-  DonutLarge as DonutLargeIcon,
-  Info as InfoIcon
+  TrendingUp,
+  TrendingDown,
+  DonutLarge,
+  Refresh
 } from '@mui/icons-material';
 import Header from '../components/Header';
-import { fetchRecommendations } from '../services/recommendationService';
-import { fetchPortfolioData } from '../services/portfolioService';
+import { fetchRecommendations, generateRecommendations } from '../services/recommendationService';
 
 const Recommendations = () => {
   const [recommendations, setRecommendations] = useState(null);
-  const [portfolio, setPortfolio] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [selectedRecommendation, setSelectedRecommendation] = useState(null);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        // First get the portfolio
-        const portfolioData = await fetchPortfolioData();
-        setPortfolio(portfolioData);
-        
-        // Then fetch recommendations for this portfolio
-        const recs = await fetchRecommendations(portfolioData.id);
-        setRecommendations(recs);
-      } catch (err) {
-        console.error('Error loading recommendations:', err);
-        setError('Failed to load recommendations');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadData();
+    loadRecommendations();
   }, []);
 
-  // Mock recommendations data for development
-  const mockRecommendations = {
-    timestamp: '2023-05-30T14:30:00Z',
-    recommendations: [
-      {
-        symbol: 'AAPL',
-        action: 'BUY',
-        strength: 'STRONG',
-        targetAllocation: 8,
-        reasoning: 'Strong buy recommendation based on positive price momentum (5.2%) and favorable sentiment analysis.',
-        current: {
-          price: 175.43,
-          change: 4.2,
-          allocation: 5
-        }
-      },
-      {
-        symbol: 'MSFT',
-        action: 'HOLD',
-        strength: 'MODERATE',
-        targetAllocation: 5,
-        reasoning: 'Maintain current position based on balanced risk and reward outlook.',
-        current: {
-          price: 290.12,
-          change: 1.3,
-          allocation: 5
-        }
-      },
-      {
-        symbol: 'TSLA',
-        action: 'SELL',
-        strength: 'MODERATE',
-        targetAllocation: 4,
-        reasoning: 'Moderate sell recommendation based on negative price trend (-2.4%) and unfavorable market sentiment.',
-        current: {
-          price: 780.25,
-          change: -2.4,
-          allocation: 6
-        }
-      },
-      {
-        symbol: 'NVDA',
-        action: 'BUY',
-        strength: 'MODERATE',
-        targetAllocation: 5,
-        reasoning: 'Based on market trends and sector analysis, adding NVDA would improve portfolio diversification.',
-        current: {
-          price: 925.50,
-          change: 3.1,
-          allocation: 0
-        }
-      },
-    ]
+  const loadRecommendations = async () => {
+    try {
+      const data = await fetchRecommendations();
+      setRecommendations(data);
+    } catch (error) {
+      console.error('Error loading recommendations:', error);
+      // Use mock data
+      setRecommendations({
+        recommendations: [
+          {
+            symbol: 'AAPL',
+            action: 'BUY',
+            confidence: 85,
+            reasoning: [
+              'Strong positive sentiment (82%)',
+              'Currently 3.2% below entry price',
+              'Underweight at 6.8% of portfolio',
+              'Improving sentiment trend'
+            ],
+            currentPrice: 170.00,
+            purchasePrice: 175.43,
+            profitLoss: '-3.20',
+            portfolioWeight: '6.8',
+            priority: 'HIGH'
+          },
+          {
+            symbol: 'TSLA',
+            action: 'SELL',
+            confidence: 88,
+            reasoning: [
+              'Strong negative sentiment (78%)',
+              'Lock in 11.5% profit before potential decline',
+              'Sentiment declining over past 7 days',
+              'Position is 24.2% of portfolio (overconcentrated)'
+            ],
+            currentPrice: 780.25,
+            purchasePrice: 700.00,
+            profitLoss: '11.46',
+            portfolioWeight: '24.2',
+            priority: 'HIGH'
+          },
+          {
+            symbol: 'MSFT',
+            action: 'HOLD',
+            confidence: 75,
+            reasoning: [
+              'Currently up 15.8%',
+              'Sentiment neutral to positive',
+              'Let winners run',
+              'Well-balanced position at 12.5% of portfolio'
+            ],
+            currentPrice: 290.12,
+            purchasePrice: 250.50,
+            profitLoss: '15.80',
+            portfolioWeight: '12.5',
+            priority: 'MEDIUM'
+          },
+          {
+            symbol: 'AMZN',
+            action: 'HOLD',
+            confidence: 70,
+            reasoning: [
+              'Position near entry price (+4.7%)',
+              'Sentiment stable',
+              'Wait for clearer trend'
+            ],
+            currentPrice: 3245.50,
+            purchasePrice: 3100.75,
+            profitLoss: '4.67',
+            portfolioWeight: '37.8',
+            priority: 'MEDIUM'
+          }
+        ],
+        portfolioMetrics: {
+          totalValue: 25750.42,
+          totalProfitLossPercent: 8.92,
+          overallSentiment: 'neutral',
+          concentrationRisk: 0.62
+        },
+        timestamp: new Date().toISOString()
+      });
+    } finally {
+      setLoading(false);
+    }
   };
-  
-  const data = recommendations || mockRecommendations;
 
-  const handleOpenDetails = (recommendation) => {
-    setSelectedRecommendation(recommendation);
-    setDetailsOpen(true);
-  };
-
-  const handleCloseDetails = () => {
-    setDetailsOpen(false);
+  const handleGenerateRecommendations = async () => {
+    setGenerating(true);
+    try {
+      const data = await generateRecommendations();
+      setRecommendations(data);
+    } catch (error) {
+      console.error('Error generating recommendations:', error);
+      alert('Failed to generate recommendations');
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const getActionColor = (action) => {
     switch (action) {
-      case 'BUY':
-        return 'success';
-      case 'SELL':
-        return 'error';
-      case 'HOLD':
-      default:
-        return 'info';
+      case 'BUY': return 'success';
+      case 'SELL': return 'error';
+      default: return 'info';
     }
   };
 
   const getActionIcon = (action) => {
     switch (action) {
-      case 'BUY':
-        return <TrendingUpIcon />;
-      case 'SELL':
-        return <TrendingDownIcon />;
-      case 'HOLD':
-      default:
-        return <DonutLargeIcon />;
+      case 'BUY': return <TrendingUp />;
+      case 'SELL': return <TrendingDown />;
+      default: return <DonutLarge />;
+    }
+  };
+
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'HIGH': return 'error';
+      case 'MEDIUM': return 'warning';
+      default: return 'default';
     }
   };
 
   if (loading) {
-    return <div>Loading recommendations...</div>;
+    return (
+      <>
+        <Header />
+        <Container><Box sx={{ mt: 4 }}><CircularProgress /></Box></Container>
+      </>
+    );
   }
 
   return (
     <>
       <Header />
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-        {error && <Typography color="error" sx={{ mb: 2 }}>{error}</Typography>}
-        
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4" component="h1">
-            AI Portfolio Recommendations
-          </Typography>
           <Box>
-            <Typography variant="subtitle2" color="textSecondary">
-              Last updated: {new Date(data.timestamp).toLocaleString()}
+            <Typography variant="h4" gutterBottom>
+              AI-Powered Recommendations
+            </Typography>
+            <Typography variant="body1" color="textSecondary">
+              Personalized buy/sell/hold recommendations based on your portfolio and market sentiment
             </Typography>
           </Box>
+          <Button
+            variant="contained"
+            startIcon={generating ? <CircularProgress size={20} color="inherit" /> : <Refresh />}
+            onClick={handleGenerateRecommendations}
+            disabled={generating}
+          >
+            {generating ? 'Generating...' : 'Refresh Recommendations'}
+          </Button>
         </Box>
-        
-        <Typography variant="body1" paragraph>
-          Based on market data, sentiment analysis, and your portfolio's performance, our AI recommends the following actions:
-        </Typography>
-        
+
+        {/* Portfolio Overview */}
+        {recommendations?.portfolioMetrics && (
+          <Grid container spacing={2} sx={{ mb: 4 }}>
+            <Grid item xs={12} sm={6} md={3}>
+              <Paper elevation={2} sx={{ p: 2 }}>
+                <Typography variant="body2" color="textSecondary">Total Value</Typography>
+                <Typography variant="h5">${recommendations.portfolioMetrics.totalValue.toLocaleString()}</Typography>
+              </Paper>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Paper elevation={2} sx={{ p: 2 }}>
+                <Typography variant="body2" color="textSecondary">Total P/L</Typography>
+                <Typography variant="h5" color={recommendations.portfolioMetrics.totalProfitLossPercent >= 0 ? 'success.main' : 'error.main'}>
+                  {recommendations.portfolioMetrics.totalProfitLossPercent >= 0 ? '+' : ''}
+                  {recommendations.portfolioMetrics.totalProfitLossPercent.toFixed(2)}%
+                </Typography>
+              </Paper>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Paper elevation={2} sx={{ p: 2 }}>
+                <Typography variant="body2" color="textSecondary">Market Sentiment</Typography>
+                <Typography variant="h5" sx={{ textTransform: 'capitalize' }}>
+                  {recommendations.portfolioMetrics.overallSentiment}
+                </Typography>
+              </Paper>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Paper elevation={2} sx={{ p: 2 }}>
+                <Typography variant="body2" color="textSecondary">Concentration Risk</Typography>
+                <Typography variant="h5" color={recommendations.portfolioMetrics.concentrationRisk > 0.6 ? 'warning.main' : 'success.main'}>
+                  {(recommendations.portfolioMetrics.concentrationRisk * 100).toFixed(0)}%
+                </Typography>
+              </Paper>
+            </Grid>
+          </Grid>
+        )}
+
+        {/* Recommendations List */}
         <Grid container spacing={3}>
-          {data.recommendations.map((recommendation, index) => (
-            <Grid item xs={12} md={6} lg={3} key={index}>
-              <Card 
-                elevation={3}
-                sx={{ 
-                  height: '100%',
-                  borderLeft: 5, 
-                  borderColor: `${getActionColor(recommendation.action)}.main` 
-                }}
-              >
+          {recommendations?.recommendations.map((rec, index) => (
+            <Grid item xs={12} md={6} key={`${rec.symbol}-${index}`}>
+              <Card elevation={3}>
                 <CardContent>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="h6">
-                      {recommendation.symbol}
-                    </Typography>
-                    <Chip
-                      label={recommendation.action}
-                      color={getActionColor(recommendation.action)}
-                      icon={getActionIcon(recommendation.action)}
-                      size="small"
-                    />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h5">{rec.symbol}</Typography>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Chip
+                        icon={getActionIcon(rec.action)}
+                        label={rec.action}
+                        color={getActionColor(rec.action)}
+                        size="medium"
+                      />
+                      <Chip
+                        label={rec.priority}
+                        color={getPriorityColor(rec.priority)}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </Box>
                   </Box>
-                  
-                  <Typography variant="subtitle2" gutterBottom>
-                    Strength: {recommendation.strength}
-                  </Typography>
-                  
-                  <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                    {recommendation.reasoning.slice(0, 100)}...
-                  </Typography>
-                  
-                  <Divider sx={{ my: 1.5 }} />
-                  
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-                    <Typography variant="body2">
-                      Price: ${recommendation.current.price}
+
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="body2" color="textSecondary">
+                      Confidence: <strong>{rec.confidence}%</strong>
                     </Typography>
-                    <Typography 
-                      variant="body2"
-                      color={recommendation.current.change >= 0 ? 'success.main' : 'error.main'}
-                    >
-                      {recommendation.current.change > 0 ? '+' : ''}
-                      {recommendation.current.change}%
-                    </Typography>
+                    {rec.currentPrice && (
+                      <Box sx={{ mt: 1 }}>
+                        <Typography variant="body2">
+                          Current: ${rec.currentPrice.toFixed(2)} | 
+                          Entry: ${rec.purchasePrice.toFixed(2)} | 
+                          P/L: <span style={{ color: parseFloat(rec.profitLoss) >= 0 ? 'green' : 'red' }}>
+                            {parseFloat(rec.profitLoss) >= 0 ? '+' : ''}{rec.profitLoss}%
+                          </span>
+                        </Typography>
+                        <Typography variant="body2">
+                          Portfolio Weight: {rec.portfolioWeight}%
+                        </Typography>
+                      </Box>
+                    )}
                   </Box>
-                  
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
-                    <Button
-                      size="small"
-                      startIcon={<InfoIcon />}
-                      onClick={() => handleOpenDetails(recommendation)}
-                    >
-                      Details
-                    </Button>
-                    <Typography variant="body2">
-                      Target: {recommendation.targetAllocation}% allocation
-                    </Typography>
-                  </Box>
+
+                  <Divider sx={{ my: 2 }} />
+
+                  <Typography variant="subtitle2" gutterBottom>Reasoning:</Typography>
+                  <List dense disablePadding>
+                    {rec.reasoning.map((reason, idx) => (
+                      <ListItem key={idx} disableGutters>
+                        <ListItemText 
+                          primary={`• ${reason}`}
+                          primaryTypographyProps={{ variant: 'body2' }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
                 </CardContent>
               </Card>
             </Grid>
           ))}
         </Grid>
-        
-        {/* Recommendation Details Dialog */}
-        <Dialog open={detailsOpen} onClose={handleCloseDetails} maxWidth="sm" fullWidth>
-          {selectedRecommendation && (
-            <>
-              <DialogTitle>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  {selectedRecommendation.symbol}
-                  <Chip
-                    label={selectedRecommendation.action}
-                    color={getActionColor(selectedRecommendation.action)}
-                    size="small"
-                  />
-                </Box>
-              </DialogTitle>
-              <DialogContent>
-                <Typography variant="subtitle1" gutterBottom>
-                  {selectedRecommendation.strength} {selectedRecommendation.action} Recommendation
-                </Typography>
-                
-                <Typography variant="body1" paragraph>
-                  {selectedRecommendation.reasoning}
-                </Typography>
-                
-                <List>
-                  <ListItem>
-                    <ListItemText 
-                      primary="Current Price" 
-                      secondary={`$${selectedRecommendation.current.price} (${selectedRecommendation.current.change > 0 ? '+' : ''}${selectedRecommendation.current.change}%)`} 
-                    />
-                  </ListItem>
-                  <Divider />
-                  <ListItem>
-                    <ListItemText 
-                      primary="Current Allocation" 
-                      secondary={`${selectedRecommendation.current.allocation}% of portfolio`} 
-                    />
-                  </ListItem>
-                  <Divider />
-                  <ListItem>
-                    <ListItemText 
-                      primary="Recommended Allocation" 
-                      secondary={`${selectedRecommendation.targetAllocation}% of portfolio`} 
-                    />
-                  </ListItem>
-                </List>
-              </DialogContent>
-              <DialogActions>
-                <Button onClick={handleCloseDetails}>Close</Button>
-              </DialogActions>
-            </>
-          )}
-        </Dialog>
+
+        {recommendations && (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="caption" color="textSecondary">
+              Last updated: {new Date(recommendations.timestamp).toLocaleString()}
+            </Typography>
+          </Box>
+        )}
       </Container>
     </>
   );
