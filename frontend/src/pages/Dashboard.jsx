@@ -25,17 +25,19 @@ const Dashboard = () => {
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
-        // Fetch portfolio data
+        // ONLY test portfolio endpoint for now
+        console.log('🔵 Fetching portfolio data...');
         const portfolio = await fetchPortfolioData();
+        console.log('✅ Portfolio data received:', portfolio);
         setPortfolioData(portfolio);
         
-        // Fetch sentiment data for portfolio assets
-        const sentiment = await fetchSentimentData(portfolio.assets.map(asset => asset.symbol));
-        setSentimentData(sentiment);
+        // // Fetch sentiment data for portfolio assets
+        // const sentiment = await fetchSentimentData(portfolio.assets.map(asset => asset.symbol));
+        // setSentimentData(sentiment);
         
-        // Fetch recommendations
-        const recs = await fetchRecommendations(portfolio.id);
-        setRecommendations(recs);
+        // // Fetch recommendations
+        // const recs = await fetchRecommendations(portfolio.id);
+        // setRecommendations(recs);
       } catch (err) {
         console.error('Error loading dashboard data:', err);
         setError('Failed to load dashboard data');
