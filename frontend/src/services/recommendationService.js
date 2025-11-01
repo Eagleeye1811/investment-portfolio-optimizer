@@ -9,7 +9,8 @@ const getAuthHeaders = async () => {
     const session = await fetchAuthSession();
     const token = session.tokens?.idToken?.toString();
     return {
-      Authorization: `Bearer ${token}`
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
     };
   } catch (error) {
     console.error('Error getting authentication token:', error);
@@ -17,38 +18,50 @@ const getAuthHeaders = async () => {
   }
 };
 
-// Fetch recommendations for a specific portfolio
-export const fetchRecommendations = async (portfolioId) => {
+// Fetch AI-powered portfolio recommendations
+// Now accepts sentiment data to ensure consistency
+export const fetchRecommendations = async (sentimentData = null) => {
   try {
     const headers = await getAuthHeaders();
-    const response = await axios.get(`${API_URL}/recommendations?portfolioId=${portfolioId}`, { headers });
-    return response.data;
+    
+    // If sentiment data is provided, send it in the request body
+    if (sentimentData) {
+      const response = await axios.post(`${API_URL}/recommendations`, 
+        { sentiment: sentimentData },
+        { headers }
+      );
+      return response.data;
+    } else {
+      // Fallback to GET if no sentiment provided (Lambda will fetch it)
+      const response = await axios.get(`${API_URL}/recommendations`, { headers });
+      return response.data;
+    }
   } catch (error) {
     console.error('Error fetching recommendations:', error);
     throw error;
   }
 };
 
-// Generate new recommendations for a portfolio
-export const generateRecommendations = async (portfolioId) => {
+// Fetch recommendations with portfolio analysis
+export const fetchDetailedRecommendations = async (portfolioId) => {
   try {
     const headers = await getAuthHeaders();
-    const response = await axios.post(`${API_URL}/recommendations/generate`, { portfolioId }, { headers });
+    const response = await axios.get(`${API_URL}/recommendations/detailed?portfolioId=${portfolioId}`, { headers });
     return response.data;
   } catch (error) {
-    console.error('Error generating recommendations:', error);
+    console.error('Error fetching detailed recommendations:', error);
     throw error;
   }
 };
 
-// Apply a specific recommendation (e.g., buy or sell an asset)
-export const applyRecommendation = async (recommendationId, action) => {
+// Fetch recommendation history
+export const fetchRecommendationHistory = async (limit = 10) => {
   try {
     const headers = await getAuthHeaders();
-    const response = await axios.post(`${API_URL}/recommendations/${recommendationId}/apply`, { action }, { headers });
+    const response = await axios.get(`${API_URL}/recommendations/history?limit=${limit}`, { headers });
     return response.data;
   } catch (error) {
-    console.error('Error applying recommendation:', error);
+    console.error('Error fetching recommendation history:', error);
     throw error;
   }
 };

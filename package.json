@@ -5,5 +5,8 @@
   "private": true,
   "workspaces": [
     "frontend"
-  ]
+  ],
+  "dependencies": {
+    "aws-sdk": "^2.1692.0"
+  }
 }

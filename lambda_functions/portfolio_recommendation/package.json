@@ -1,0 +1,9 @@
+{
+  "name": "recommendations-api",
+  "version": "1.0.0",
+  "description": "Portfolio recommendations Lambda",
+  "main": "recommend_portfolio.js",
+  "dependencies": {
+    "aws-sdk": "^2.1600.0"
+  }
+}

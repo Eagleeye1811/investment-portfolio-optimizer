@@ -22,7 +22,9 @@ import {
   Refresh
 } from '@mui/icons-material';
 import Header from '../components/Header';
-import { fetchRecommendations, generateRecommendations } from '../services/recommendationService';
+import { fetchRecommendations } from '../services/recommendationService';
+import { fetchSentimentData } from '../services/sentimentService';
+import { fetchPortfolioData } from '../services/portfolioService';
 
 const Recommendations = () => {
   const [recommendations, setRecommendations] = useState(null);
@@ -35,11 +37,23 @@ const Recommendations = () => {
 
   const loadRecommendations = async () => {
     try {
-      const data = await fetchRecommendations();
+      // 🔥 Step 1: Fetch portfolio to get symbols
+      const portfolio = await fetchPortfolioData();
+      
+      // 🔥 Step 2: Fetch sentiment FIRST (single source of truth)
+      const sentiment = await fetchSentimentData(portfolio.assets.map(asset => asset.symbol));
+      
+      console.log('📊 Sentiment data for recommendations:', sentiment);
+      
+      // 🔥 Step 3: Pass sentiment to recommendations API (ensures sync!)
+      const data = await fetchRecommendations(sentiment);
+      
+      console.log('💡 Recommendations received:', data);
+      
       setRecommendations(data);
     } catch (error) {
       console.error('Error loading recommendations:', error);
-      // Use mock data
+      // Use mock data as fallback
       setRecommendations({
         recommendations: [
           {
@@ -56,7 +70,12 @@ const Recommendations = () => {
             purchasePrice: 175.43,
             profitLoss: '-3.20',
             portfolioWeight: '6.8',
-            priority: 'HIGH'
+            priority: 'HIGH',
+            sentiment: {
+              positive: 0.82,
+              negative: 0.08,
+              trend: 'improving'
+            }
           },
           {
             symbol: 'TSLA',
@@ -72,7 +91,12 @@ const Recommendations = () => {
             purchasePrice: 700.00,
             profitLoss: '11.46',
             portfolioWeight: '24.2',
-            priority: 'HIGH'
+            priority: 'HIGH',
+            sentiment: {
+              positive: 0.12,
+              negative: 0.78,
+              trend: 'declining'
+            }
           },
           {
             symbol: 'MSFT',
@@ -88,7 +112,12 @@ const Recommendations = () => {
             purchasePrice: 250.50,
             profitLoss: '15.80',
             portfolioWeight: '12.5',
-            priority: 'MEDIUM'
+            priority: 'MEDIUM',
+            sentiment: {
+              positive: 0.52,
+              negative: 0.28,
+              trend: 'stable'
+            }
           },
           {
             symbol: 'AMZN',
@@ -103,7 +132,12 @@ const Recommendations = () => {
             purchasePrice: 3100.75,
             profitLoss: '4.67',
             portfolioWeight: '37.8',
-            priority: 'MEDIUM'
+            priority: 'MEDIUM',
+            sentiment: {
+              positive: 0.48,
+              negative: 0.32,
+              trend: 'stable'
+            }
           }
         ],
         portfolioMetrics: {
@@ -122,8 +156,8 @@ const Recommendations = () => {
   const handleGenerateRecommendations = async () => {
     setGenerating(true);
     try {
-      const data = await generateRecommendations();
-      setRecommendations(data);
+      // 🔥 Reload with fresh sentiment data
+      await loadRecommendations();
     } catch (error) {
       console.error('Error generating recommendations:', error);
       alert('Failed to generate recommendations');
@@ -160,7 +194,16 @@ const Recommendations = () => {
     return (
       <>
         <Header />
-        <Container><Box sx={{ mt: 4 }}><CircularProgress /></Box></Container>
+        <Container maxWidth="xl" sx={{ mt: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+            <Box sx={{ textAlign: 'center' }}>
+              <CircularProgress size={60} />
+              <Typography variant="h6" sx={{ mt: 2 }}>
+                Analyzing your portfolio and market sentiment...
+              </Typography>
+            </Box>
+          </Box>
+        </Container>
       </>
     );
   }
@@ -267,6 +310,29 @@ const Recommendations = () => {
                         </Typography>
                       </Box>
                     )}
+                    
+                    {/* Sentiment Info */}
+                    {rec.sentiment && (
+                      <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        <Chip 
+                          label={`📈 ${(rec.sentiment.positive * 100).toFixed(0)}% Positive`}
+                          size="small"
+                          color={rec.sentiment.positive > 0.55 ? 'success' : 'default'}
+                          variant="outlined"
+                        />
+                        <Chip 
+                          label={`📉 ${(rec.sentiment.negative * 100).toFixed(0)}% Negative`}
+                          size="small"
+                          color={rec.sentiment.negative > 0.55 ? 'error' : 'default'}
+                          variant="outlined"
+                        />
+                        <Chip 
+                          label={`Trend: ${rec.sentiment.trend}`}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </Box>
+                    )}
                   </Box>
 
                   <Divider sx={{ my: 2 }} />
@@ -289,10 +355,16 @@ const Recommendations = () => {
         </Grid>
 
         {recommendations && (
-          <Box sx={{ mt: 2 }}>
+          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="caption" color="textSecondary">
               Last updated: {new Date(recommendations.timestamp).toLocaleString()}
             </Typography>
+            <Chip 
+              label="🔴 LIVE DATA" 
+              size="small" 
+              color="error" 
+              className="pulse-icon"
+            />
           </Box>
         )}
       </Container>

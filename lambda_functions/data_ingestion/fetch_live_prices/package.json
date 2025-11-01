@@ -1,0 +1,9 @@
+{
+    "name": "fetch-live-prices",
+    "version": "1.0.0",
+    "description": "Fetch and update live stock prices",
+    "main": "index.js",
+    "dependencies": {
+      "aws-sdk": "^2.1691.0"
+    }
+  }
